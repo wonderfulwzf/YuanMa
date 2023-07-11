@@ -1,10 +1,10 @@
 package sping;
 
-import wzf.service.UserService;
-
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 public class WzfApplicationContext {
@@ -14,12 +14,27 @@ public class WzfApplicationContext {
 
     //BeanDefinitionMap
     private Map<String,BeanDefinition> beanDefinitionMap = new HashMap<>();
+    private Map<String,Object>  singletonObject = new HashMap<>();
 
 
     public WzfApplicationContext(Class configClass) {
         this.configClass = configClass;
         //扫描
         scan(configClass);
+
+        //找出单例bean,创建并加入单例池
+        Iterator<Map.Entry<String, BeanDefinition>> iterator = beanDefinitionMap.entrySet().iterator();
+        while (iterator.hasNext()){
+            Map.Entry<String, BeanDefinition> next = iterator.next();
+            String beanName = next.getKey();
+            BeanDefinition beanDefinition = next.getValue();
+            if ("singleton".equals(beanDefinition.getScope())){
+                Object bean = createBean(beanName, beanDefinition);
+                //保存进单例池
+                singletonObject.put(beanName,bean);
+            }
+
+        }
 
     }
 
@@ -72,7 +87,6 @@ public class WzfApplicationContext {
                         }else {
                             //单例
                             beanDefinition.setScope("singleton");
-
                         }
                         beanDefinitionMap.put(beanName,beanDefinition);
 
@@ -83,7 +97,43 @@ public class WzfApplicationContext {
     }
 
     public Object getBean(String beanName){
-        return new UserService();
+        Object bean = null;
+        if (!beanDefinitionMap.containsKey(beanName)){
+            throw  new NullPointerException();
+        }
+        //如果有
+        BeanDefinition beanDefinition = beanDefinitionMap.get(beanName);
+
+       if ("singleton".equals(beanDefinition.getScope())){
+           //单例逻辑
+            if (!singletonObject.containsKey(beanName)){
+              return createBean(beanName, beanDefinition);
+            }
+             return singletonObject.get(beanName);
+       }
+       //其他
+       return createBean(beanName, beanDefinition);
+    }
+
+
+    //创建bean
+    private Object createBean(String beanName,BeanDefinition beanDefinition){
+        Class aclass = beanDefinition.getType();
+        Object instance = null;
+        try {
+            //通过反射+无参构造创建bean
+            instance = aclass.getConstructor().newInstance();
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException(e);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+
+        return instance;
     }
 
 }
