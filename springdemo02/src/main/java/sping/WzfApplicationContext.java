@@ -145,6 +145,11 @@ public class WzfApplicationContext {
                 }
             }
 
+            //实例化接口回调
+            if (instance instanceof InitializingBean){
+                ((InitializingBean) instance).afterPropertiesSet();
+            }
+
 
         } catch (InstantiationException e) {
             throw new RuntimeException(e);
