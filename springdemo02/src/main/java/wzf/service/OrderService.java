@@ -3,7 +3,7 @@ package wzf.service;
 import sping.Component;
 import sping.Scope;
 
-@Component("orderService")
+@Component
 @Scope
 public class OrderService {
 }

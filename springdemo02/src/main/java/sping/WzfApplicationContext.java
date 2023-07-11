@@ -1,5 +1,6 @@
 package sping;
 
+import java.beans.Introspector;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
@@ -72,6 +73,11 @@ public class WzfApplicationContext {
 
                         //获取bean的名字存入BeanDefinitionMap
                         String beanName = aClass.getAnnotation(Component.class).value();
+
+                        //如果bean未写
+                        if ("".equals(beanName)){
+                            beanName = Introspector.decapitalize(aClass.getSimpleName());
+                        }
 
                         //这是我们需要创建的bean
                         System.out.println("修饰的class"+absolutePath);

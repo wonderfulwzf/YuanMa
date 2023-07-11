@@ -1,6 +1,7 @@
 package wzf;
 
 import sping.WzfApplicationContext;
+import wzf.service.OrderService;
 import wzf.service.UserService;
 
 public class Test {
@@ -11,5 +12,7 @@ public class Test {
         UserService userService1 = (UserService) context.getBean("userService");
         System.out.println(userService);
         System.out.println(userService1);
+        OrderService orderService = (OrderService) context.getBean("orderService");
+        System.out.println(orderService);
     }
 }
