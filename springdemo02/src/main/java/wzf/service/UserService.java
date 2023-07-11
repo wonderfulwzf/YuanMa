@@ -1,7 +1,7 @@
 package wzf.service;
 
-import org.springframework.stereotype.Service;
+import sping.Component;
 
-@Service
+@Component("userService")
 public class UserService {
 }
