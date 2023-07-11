@@ -7,6 +7,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 
 public class WzfApplicationContext {
@@ -17,6 +18,8 @@ public class WzfApplicationContext {
     //BeanDefinitionMap
     private Map<String,BeanDefinition> beanDefinitionMap = new HashMap<>();
     private Map<String,Object>  singletonObject = new HashMap<>();
+
+    private LinkedList<BeanPostProcessor> beanPostProcessors = new LinkedList<>();
 
 
     public WzfApplicationContext(Class configClass) {
@@ -66,38 +69,56 @@ public class WzfApplicationContext {
                     //加载类
                     try {
                         aClass = classLoader.loadClass(absolutePath);
+
+                        //判断类是否实现BeanPostProcessor接口
+                        if (BeanPostProcessor.class.isAssignableFrom(aClass)){
+                            BeanPostProcessor beanPostProcessor = (BeanPostProcessor) aClass.getConstructor().newInstance();
+                            beanPostProcessors.add(beanPostProcessor);
+                        }else {
+                            //表示被Component修饰
+                            if (aClass.isAnnotationPresent(Component.class)){
+
+                                //获取bean的名字存入BeanDefinitionMap
+                                String beanName = aClass.getAnnotation(Component.class).value();
+
+                                //如果bean未写
+                                if ("".equals(beanName)){
+                                    beanName = Introspector.decapitalize(aClass.getSimpleName());
+                                }
+
+                                //这是我们需要创建的bean
+                                System.out.println("修饰的class"+absolutePath);
+
+                                //创建beandefinition
+                                BeanDefinition beanDefinition = new BeanDefinition();
+                                beanDefinition.setType(aClass);
+
+                                //判断有没有scope注解,没有默认单例
+                                if (aClass.isAnnotationPresent(Scope.class)){
+                                    String value = aClass.getAnnotation(Scope.class).value();
+                                    beanDefinition.setScope(value);
+                                }else {
+                                    //单例
+                                    beanDefinition.setScope("singleton");
+                                }
+                                beanDefinitionMap.put(beanName,beanDefinition);
+
+                            }
+                        }
+
+
                     } catch (ClassNotFoundException e) {
                         throw new RuntimeException(e);
+                    } catch (InvocationTargetException e) {
+                        throw new RuntimeException(e);
+                    } catch (InstantiationException e) {
+                        throw new RuntimeException(e);
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException(e);
+                    } catch (NoSuchMethodException e) {
+                        throw new RuntimeException(e);
                     }
-                    //表示被Component修饰
-                    if (aClass.isAnnotationPresent(Component.class)){
 
-                        //获取bean的名字存入BeanDefinitionMap
-                        String beanName = aClass.getAnnotation(Component.class).value();
-
-                        //如果bean未写
-                        if ("".equals(beanName)){
-                            beanName = Introspector.decapitalize(aClass.getSimpleName());
-                        }
-
-                        //这是我们需要创建的bean
-                        System.out.println("修饰的class"+absolutePath);
-                        
-                        //创建beandefinition
-                        BeanDefinition beanDefinition = new BeanDefinition();
-                        beanDefinition.setType(aClass);
-
-                        //判断有没有scope注解,没有默认单例
-                        if (aClass.isAnnotationPresent(Scope.class)){
-                            String value = aClass.getAnnotation(Scope.class).value();
-                            beanDefinition.setScope(value);
-                        }else {
-                            //单例
-                            beanDefinition.setScope("singleton");
-                        }
-                        beanDefinitionMap.put(beanName,beanDefinition);
-
-                    }
                 }
             }
         }
@@ -148,6 +169,11 @@ public class WzfApplicationContext {
             //实例化接口回调
             if (instance instanceof InitializingBean){
                 ((InitializingBean) instance).afterPropertiesSet();
+            }
+
+            //BeanPostProcessor
+            for (BeanPostProcessor beanPostProcessor : beanPostProcessors){
+                beanPostProcessor.postProcessAfterInitializingBean(instance,beanName);
             }
 
 
