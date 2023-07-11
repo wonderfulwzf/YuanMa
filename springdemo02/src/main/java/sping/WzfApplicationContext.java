@@ -2,6 +2,7 @@ package sping;
 
 import java.beans.Introspector;
 import java.io.File;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.HashMap;
@@ -115,7 +116,12 @@ public class WzfApplicationContext {
             if (!singletonObject.containsKey(beanName)){
               return createBean(beanName, beanDefinition);
             }
-             return singletonObject.get(beanName);
+            bean = singletonObject.get(beanName);
+           if (bean == null){
+               bean =  createBean(beanName, beanDefinition);
+           }
+           singletonObject.put(beanName,bean);
+           return bean;
        }
        //其他
        return createBean(beanName, beanDefinition);
@@ -129,6 +135,17 @@ public class WzfApplicationContext {
         try {
             //通过反射+无参构造创建bean
             instance = aclass.getConstructor().newInstance();
+
+            //进行依赖注入
+            //遍历字段属性
+            for (Field field : aclass.getDeclaredFields()){
+                if (field.isAnnotationPresent(Autowired.class)){
+                    field.setAccessible(true);
+                    field.set(instance,getBean(field.getName()));
+                }
+            }
+
+
         } catch (InstantiationException e) {
             throw new RuntimeException(e);
         } catch (IllegalAccessException e) {
